@@ -19,10 +19,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/algorand/go-algorand/config"
+	"github.com/algorand/go-algorand/data/bookkeeping"
 	/*
 		"github.com/algorand/go-deadlock"
 		"github.com/gofrs/flock"
@@ -57,10 +61,17 @@ func main() {
 	flag.Parse()
 
 	dataDir := resolveDataDir()
-	absolutePath, absPathErr := filepath.Abs(dataDir)
+	absolutePath, _ := filepath.Abs(dataDir)
 	config.UpdateVersionDataDir(absolutePath)
 
-	fmt.Println(absPathErr)
+	rand.Seed(time.Now().UnixNano())
+	//version := config.GetCurrentVersion()
+
+	genesisText, _ := ioutil.ReadFile("genesis.json")
+	var genesis bookkeeping.Genesis
+	//protocol.DecodeJSON(genesisText, &genesis)
+	fmt.Printf("%+v", genesis)
+
 }
 
 func resolveDataDir() string {

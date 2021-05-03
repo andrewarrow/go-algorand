@@ -1,23 +1,6 @@
 
 func main2() {
-	if *seed != "" {
-		seedVal, err := strconv.ParseInt(*seed, 10, 64)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "bad seed %#v: %s\n", *seed, err)
-			os.Exit(1)
-			return
-		}
-		rand.Seed(seedVal)
-	} else {
-		rand.Seed(time.Now().UnixNano())
-	}
 
-	if *versionCheck {
-		fmt.Println(config.FormatVersionAndLicense())
-		return
-	}
-
-	version := config.GetCurrentVersion()
 	heartbeatGauge := metrics.MakeStringGauge()
 	heartbeatGauge.Set("version", version.String())
 	heartbeatGauge.Set("version-num", strconv.FormatUint(version.AsUInt64(), 10))
