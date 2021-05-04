@@ -2,12 +2,20 @@ package main
 
 import (
 	"fmt"
+	"fresh/algod"
 	"fresh/data/bookkeeping"
 )
 
 func main() {
 	fmt.Println("fresh-start")
-	g := bookkeeping.Genesis{}
-	fmt.Println(g)
+	genesis := bookkeeping.Genesis{}
+	absolutePath := "."
+
+	s := algod.Server{
+		RootPath: absolutePath,
+		Genesis:  genesis,
+	}
+	fmt.Println(s)
+	s.Start()
 
 }
