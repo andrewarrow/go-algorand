@@ -22,6 +22,7 @@ bundledSpecInject.go
 
 # Exclude go binaries built in-place
 cmd/algod/algod
+cmd/skeleton/skeleton
 cmd/goal/goal
 cmd/updater/updater
 
