@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"fresh/daemon/algod"
 	"fresh/data/bookkeeping"
+	"time"
 )
 
 func main() {
@@ -18,5 +19,9 @@ func main() {
 	s.Initialize()
 	fmt.Println(s)
 	s.Start()
+
+	for {
+		time.Sleep(time.Second)
+	}
 
 }
