@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"fresh/algod"
+	"fresh/daemon/algod"
 	"fresh/data/bookkeeping"
 )
 
@@ -15,6 +15,7 @@ func main() {
 		RootPath: absolutePath,
 		Genesis:  genesis,
 	}
+	s.Initialize()
 	fmt.Println(s)
 	s.Start()
 
