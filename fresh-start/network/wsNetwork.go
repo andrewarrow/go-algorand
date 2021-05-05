@@ -23,7 +23,21 @@ func (wn *WebsocketNetwork) meshThread() {
 		time.Sleep(time.Second)
 	}
 }
+func (wn *WebsocketNetwork) messageHandlerThread() {
+	for {
+		fmt.Println("messageHandler")
+		time.Sleep(time.Second)
+	}
+}
+func (wn *WebsocketNetwork) broadcastThread() {
+	for {
+		fmt.Println("broadcast")
+		time.Sleep(time.Second)
+	}
+}
 
 func (wn *WebsocketNetwork) Start() {
 	go wn.meshThread()
+	go wn.messageHandlerThread()
+	go wn.broadcastThread()
 }
