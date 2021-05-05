@@ -169,6 +169,7 @@ func MakeFull(log logging.Logger, rootDir string, cfg config.Local, phonebookAdd
 
 	// tie network, block fetcher, and agreement services together
 	p2pNode, err := network.NewWebsocketNetwork(node.log, node.config, phonebookAddresses, genesis.ID(), genesis.Network)
+	fmt.Println("333333", fmt.Sprintf("%+v", p2pNode))
 	if err != nil {
 		log.Errorf("could not create websocket node: %v", err)
 		return nil, err

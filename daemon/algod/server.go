@@ -61,6 +61,7 @@ type Server struct {
 
 // Initialize creates a Node instance with applicable network services
 func (s *Server) Initialize(cfg config.Local, phonebookAddresses []string, genesisText string) error {
+	fmt.Println("111111", phonebookAddresses)
 	// set up node
 	s.log = logging.Base()
 
@@ -124,6 +125,7 @@ func (s *Server) Initialize(cfg config.Local, phonebookAddresses []string, genes
 			NodeExporterPath:          cfg.NodeExporterPath,
 		})
 
+	fmt.Println("2222222")
 	s.node, err = node.MakeFull(s.log, s.RootPath, cfg, phonebookAddresses, s.Genesis)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("node has not been installed: %s", err)
