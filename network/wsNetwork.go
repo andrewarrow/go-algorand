@@ -1141,6 +1141,7 @@ func (wn *WebsocketNetwork) messageHandlerThread() {
 			start := time.Now()
 
 			// now, send to global handlers
+			fmt.Printf("AADEBUG %+v\n", wn.handlers)
 			outmsg := wn.handlers.Handle(msg)
 			handled := time.Now()
 			bufferNanos := start.UnixNano() - msg.Received

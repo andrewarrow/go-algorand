@@ -228,6 +228,7 @@ func (handler *TxHandler) processIncomingTxn(rawmsg network.IncomingMessage) net
 		}
 
 		err := dec.Decode(&unverifiedTxGroup[ntx])
+		fmt.Println("aaaaaa", string(unverifiedTxGroup[ntx].Txn.Type))
 		if err == io.EOF {
 			break
 		}

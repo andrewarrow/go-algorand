@@ -412,6 +412,7 @@ func (wp *wsPeer) readLoop() {
 			return
 		}
 		msg.Tag = Tag(string(tag[:]))
+		fmt.Println("     77777777", msg.Tag)
 		slurper.Reset()
 		err = slurper.Read(reader)
 		if err != nil {
@@ -421,6 +422,7 @@ func (wp *wsPeer) readLoop() {
 		msg.processing = wp.processed
 		msg.Received = time.Now().UnixNano()
 		msg.Data = slurper.Bytes()
+		//fmt.Println("     888888888", msg.Data)
 		msg.Net = wp.net
 		atomic.StoreInt64(&wp.lastPacketTime, msg.Received)
 		networkReceivedBytesTotal.AddUint64(uint64(len(msg.Data)+2), nil)
