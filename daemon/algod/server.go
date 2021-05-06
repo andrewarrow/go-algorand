@@ -231,7 +231,10 @@ func (s *Server) Start() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 	signal.Ignore(syscall.SIGHUP)
 
-	fmt.Printf("Node running and accepting RPC requests over HTTP on port %v. Press Ctrl-C to exit\n", addr)
+	fmt.Printf("on port %v.\n", addr)
+	time.Sleep(time.Second * 5)
+	s.Stop()
+	os.Exit(0)
 	select {
 	case err := <-errChan:
 		if err != nil {
