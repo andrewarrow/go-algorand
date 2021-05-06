@@ -1,18 +1,3 @@
-// Copyright (C) 2019-2021 Algorand, Inc.
-// This file is part of go-algorand
-//
-// go-algorand is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
-//
-// go-algorand is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with go-algorand.  If not, see <https://www.gnu.org/licenses/>.
 
 package data
 
@@ -34,45 +19,30 @@ import (
 	"github.com/algorand/go-algorand/protocol"
 )
 
-// The Ledger object in this (data) package provides a wrapper around the
-// Ledger from the ledger package.  The reason for this is compatibility
-// with the existing callers of the previous ledger API, without increasing
-// the complexity of the ledger.Ledger code.  This Ledger object also
-// implements various wrappers that return subsets of data exposed by
-// ledger.Ledger, or return it in different forms, or return it for the
-// latest round (as opposed to arbitrary rounds).
 type Ledger struct {
 	*ledger.Ledger
 
 	log logging.Logger
 
-	// a two-item moving window cache for the total number of online circulating coins
 	lastRoundCirculation atomic.Value
-	// a two-item moving window cache for the round seed
 	lastRoundSeed atomic.Value
 }
 
-// roundCirculationPair used to hold a pair of matching round number and the amount of online money
 type roundCirculationPair struct {
 	round       basics.Round
 	onlineMoney basics.MicroAlgos
 }
 
-// roundCirculation is the cache for the circulating coins
 type roundCirculation struct {
-	// elements holds several round-onlineMoney pairs
 	elements [2]roundCirculationPair
 }
 
-// roundSeedPair is the cache for a single seed at a given round
 type roundSeedPair struct {
 	round basics.Round
 	seed  committee.Seed
 }
 
-// roundSeed is the cache for the seed
 type roundSeed struct {
-	// elements holds several round-seed pairs
 	elements [2]roundSeedPair
 }
 
@@ -124,8 +94,6 @@ func makeGenesisBlock(proto protocol.ConsensusVersion, genesisBal GenesisBalance
 	return blk, nil
 }
 
-// LoadLedger creates a Ledger object to represent the ledger with the
-// specified database file prefix, initializing it if necessary.
 func LoadLedger(
 	log logging.Logger, dbFilenamePrefix string, memory bool,
 	genesisProto protocol.ConsensusVersion, genesisBal GenesisBalances, genesisID string, genesisHash crypto.Digest,
@@ -167,7 +135,6 @@ func LoadLedger(
 	return l, nil
 }
 
-// AddressTxns returns the list of transactions to/from a given address in specific round
 func (l *Ledger) AddressTxns(id basics.Address, r basics.Round) ([]transactions.SignedTxnWithAD, error) {
 	blk, err := l.Block(r)
 	if err != nil {
@@ -191,7 +158,6 @@ func (l *Ledger) AddressTxns(id basics.Address, r basics.Round) ([]transactions.
 	return res, nil
 }
 
-// LookupTxid returns the transaction with a given ID in a specific round
 func (l *Ledger) LookupTxid(txid transactions.Txid, r basics.Round) (stxn transactions.SignedTxnWithAD, found bool, err error) {
 	var blk bookkeeping.Block
 	blk, err = l.Block(r)
@@ -211,18 +177,14 @@ func (l *Ledger) LookupTxid(txid transactions.Txid, r basics.Round) (stxn transa
 	return transactions.SignedTxnWithAD{}, false, nil
 }
 
-// LastRound returns the local latest round of the network i.e. the *last* written block
 func (l *Ledger) LastRound() basics.Round {
 	return l.Latest()
 }
 
-// NextRound returns the *next* block to write i.e. latest() + 1
-// Implements agreement.Ledger.NextRound
 func (l *Ledger) NextRound() basics.Round {
 	return l.LastRound() + 1
 }
 
-// Circulation implements agreement.Ledger.Circulation.
 func (l *Ledger) Circulation(r basics.Round) (basics.MicroAlgos, error) {
 	circulation, cached := l.lastRoundCirculation.Load().(roundCirculation)
 	if cached && r != basics.Round(0) {
@@ -253,10 +215,6 @@ func (l *Ledger) Circulation(r basics.Round) (basics.MicroAlgos, error) {
 	return totals.Online.Money, nil
 }
 
-// Seed gives the VRF seed that was agreed on in a given round,
-// returning an error if we don't have that round or we have an
-// I/O error.
-// Implements agreement.Ledger.Seed
 func (l *Ledger) Seed(r basics.Round) (committee.Seed, error) {
 	seed, cached := l.lastRoundSeed.Load().(roundSeed)
 	if cached && r != basics.Round(0) {
@@ -288,10 +246,6 @@ func (l *Ledger) Seed(r basics.Round) (committee.Seed, error) {
 	return blockhdr.Seed, nil
 }
 
-// LookupDigest gives the block hash that was agreed on in a given round,
-// returning an error if we don't have that round or we have an
-// I/O error.
-// Implements agreement.Ledger.LookupDigest
 func (l *Ledger) LookupDigest(r basics.Round) (crypto.Digest, error) {
 	blockhdr, err := l.BlockHdr(r)
 	if err != nil {
@@ -300,10 +254,6 @@ func (l *Ledger) LookupDigest(r basics.Round) (crypto.Digest, error) {
 	return crypto.Digest(blockhdr.Hash()), nil
 }
 
-// ConsensusParams gives the consensus parameters agreed on in a given round,
-// returning an error if we don't have that round or we have an
-// I/O error.
-// Implements agreement.Ledger.ConsensusParams
 func (l *Ledger) ConsensusParams(r basics.Round) (config.ConsensusParams, error) {
 	blockhdr, err := l.BlockHdr(r)
 	if err != nil {
@@ -312,59 +262,35 @@ func (l *Ledger) ConsensusParams(r basics.Round) (config.ConsensusParams, error)
 	return config.Consensus[blockhdr.UpgradeState.CurrentProtocol], nil
 }
 
-// ConsensusVersion gives the consensus version agreed on in a given round,
-// returning an error if the consensus version could not be figured using
-// either the block header for the given round, or the latest block header.
-// Implements agreement.Ledger.ConsensusVersion
 func (l *Ledger) ConsensusVersion(r basics.Round) (protocol.ConsensusVersion, error) {
 	blockhdr, err := l.BlockHdr(r)
 	if err == nil {
 		return blockhdr.UpgradeState.CurrentProtocol, nil
 	}
-	// try to see if we can figure out what the version would be.
 	latestCommittedRound, latestRound := l.LatestCommitted()
-	// if the request round was for an older round, then just say the we don't know.
 	if r < latestRound {
 		return "", err
 	}
-	// the request was for a future round. See if we have any known plans for the next round.
 	latestBlockhdr, err := l.BlockHdr(latestRound)
-	// if we have the lastest block header, look inside and try to figure out if we can deduce the
-	// protocol version for the given round.
 	if err == nil {
-		// check to see if we have a protocol upgrade.
 		if latestBlockhdr.NextProtocolSwitchOn == 0 {
-			// no protocol upgrade taking place, we have *at least* UpgradeVoteRounds before the protocol version would get changed.
-			// it's safe to ignore the error case here since we know that we couldn't reached to this "known" round
-			// without having the binary supporting this protocol version.
 			currentConsensusParams, _ := config.Consensus[latestBlockhdr.CurrentProtocol]
-			// we're using <= here since there is no current upgrade on this round, and if there will be one on the subsequent round
-			// it would still be correct until (latestBlockhdr.Round + currentConsensusParams.UpgradeVoteRounds)
 			if r <= latestBlockhdr.Round+basics.Round(currentConsensusParams.UpgradeVoteRounds) {
 				return latestBlockhdr.CurrentProtocol, nil
 			}
-			// otherwise, we can't really tell.
 			return "", ledgercore.ErrNoEntry{Round: r, Latest: latestRound, Committed: latestCommittedRound}
 		}
-		// in this case, we do have a protocol upgrade taking place.
 		if r < latestBlockhdr.NextProtocolSwitchOn {
-			// if we're in the voting duration or uprade waiting period, then the protocol version is the current version.
 			return latestBlockhdr.CurrentProtocol, nil
 		}
-		// if the requested round aligns with the protocol version switch version and we've passed the voting period, then we know that on the switching round
-		// we will be using the next protocol.
 		if r == latestBlockhdr.NextProtocolSwitchOn && latestBlockhdr.Round >= latestBlockhdr.NextProtocolVoteBefore {
 			return latestBlockhdr.NextProtocol, nil
 		}
 		err = ledgercore.ErrNoEntry{Round: r, Latest: latestRound, Committed: latestCommittedRound}
 	}
-	// otherwise, we can't really tell what the protocol version would be at round r.
 	return "", err
 }
 
-// EnsureValidatedBlock ensures that the block, and associated certificate c, are
-// written to the ledger, or that some other block for the same round is
-// written to the ledger.
 func (l *Ledger) EnsureValidatedBlock(vb *ledger.ValidatedBlock, c agreement.Certificate) {
 	round := vb.Block().Round()
 
@@ -385,10 +311,6 @@ func (l *Ledger) EnsureValidatedBlock(vb *ledger.ValidatedBlock, c agreement.Cer
 	}
 }
 
-// EnsureBlock ensures that the block, and associated certificate c, are
-// written to the ledger, or that some other block for the same round is
-// written to the ledger.
-// This function can be called concurrently.
 func (l *Ledger) EnsureBlock(block *bookkeeping.Block, c agreement.Certificate) {
 	round := block.Round()
 	protocolErrorLogged := false
@@ -412,7 +334,6 @@ func (l *Ledger) EnsureBlock(block *bookkeeping.Block, c agreement.Certificate) 
 			logging.Base().Errorf("could not write block %d to the ledger: %v", round, err)
 		}
 
-		// If there was an error add a short delay before the next attempt.
 		time.Sleep(100 * time.Millisecond)
 	}
 }

@@ -113,9 +113,11 @@ func (handler *TxHandler) backlogWorker() {
 			if !ok {
 				return
 			}
+			fmt.Println("handler.checkAlreadyCommitted1")
 			if handler.checkAlreadyCommitted(wi) {
 				continue
 			}
+			fmt.Println("handler.checkAlreadyCommitted2")
 
 			handler.txVerificationPool.EnqueueBacklog(handler.ctx, handler.asyncVerifySignature, wi, nil)
 
@@ -160,6 +162,7 @@ func (handler *TxHandler) asyncVerifySignature(arg interface{}) interface{} {
 	tx := arg.(*txBacklogMsg)
 
 	latest := handler.ledger.Latest()
+	fmt.Printf("Latest %+v\n", latest)
 	latestHdr, err := handler.ledger.BlockHdr(latest)
 	if err != nil {
 		tx.verificationErr = fmt.Errorf("Could not get header for previous block %d: %w", latest, err)
@@ -210,13 +213,14 @@ func (handler *TxHandler) processIncomingTxn(rawmsg network.IncomingMessage) net
 		sTx := unverifiedTxGroup[ntx]
 		tx := sTx.Txn
 		flavor := fmt.Sprintf("%v", tx.Type)
-		if flavor == "pay" {
-			fmt.Printf("%s %s %s %s %s\n", LeftAligned(tx.Type, 10),
-				LeftAligned(tx.Header.Sender, 20),
-				LeftAligned(tx.PaymentTxnFields.Receiver, 20),
-				LeftAligned(tx.PaymentTxnFields.Amount, 20),
-				LeftAligned(len(sTx.Sig), 10))
+		if tx.AssetParams.AssetName != "" {
+			fmt.Println(fmt.Sprintf("%+v", tx.AssetParams))
 		}
+		fmt.Printf("%s %s %s %s %s\n", LeftAligned(flavor, 10),
+			LeftAligned(tx.Header.Sender, 20),
+			LeftAligned(tx.PaymentTxnFields.Receiver, 20),
+			LeftAligned(tx.PaymentTxnFields.Amount, 20),
+			LeftAligned(len(sTx.Sig), 10))
 
 		//Header.Sender
 		//Header.Fee
@@ -236,6 +240,7 @@ func (handler *TxHandler) processIncomingTxn(rawmsg network.IncomingMessage) net
 		return network.OutgoingMessage{Action: network.Disconnect}
 	}
 	unverifiedTxGroup = unverifiedTxGroup[:ntx]
+	fmt.Println("unverifiedTxGroup", len(unverifiedTxGroup))
 
 	select {
 	case handler.backlogQueue <- &txBacklogMsg{
