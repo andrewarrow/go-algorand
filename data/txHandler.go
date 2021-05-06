@@ -209,11 +209,14 @@ func (handler *TxHandler) processIncomingTxn(rawmsg network.IncomingMessage) net
 
 		sTx := unverifiedTxGroup[ntx]
 		tx := sTx.Txn
-		fmt.Printf("%s %s %s %s %s\n", LeftAligned(tx.Type, 10),
-			LeftAligned(tx.Header.Sender, 20),
-			LeftAligned(tx.PaymentTxnFields.Receiver, 20),
-			LeftAligned(tx.PaymentTxnFields.Amount, 20),
-			LeftAligned(len(sTx.Sig), 10))
+		flavor := fmt.Sprintf("%v", tx.Type)
+		if flavor == "pay" {
+			fmt.Printf("%s %s %s %s %s\n", LeftAligned(tx.Type, 10),
+				LeftAligned(tx.Header.Sender, 20),
+				LeftAligned(tx.PaymentTxnFields.Receiver, 20),
+				LeftAligned(tx.PaymentTxnFields.Amount, 20),
+				LeftAligned(len(sTx.Sig), 10))
+		}
 
 		//Header.Sender
 		//Header.Fee

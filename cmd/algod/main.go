@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -61,6 +62,12 @@ func main() {
 
 	dataDir := resolveDataDir()
 	absolutePath, absPathErr := filepath.Abs(dataDir)
+	o, _ := exec.Command("rm", "-rf", absolutePath).CombinedOutput()
+	fmt.Println(string(o))
+	o, _ = exec.Command("mkdir", absolutePath).CombinedOutput()
+	fmt.Println(string(o))
+	o, _ = exec.Command("cp", "../../installer/genesis/mainnet/genesis.json", absolutePath).CombinedOutput()
+	fmt.Println(string(o))
 	config.UpdateVersionDataDir(absolutePath)
 
 	if *seed != "" {

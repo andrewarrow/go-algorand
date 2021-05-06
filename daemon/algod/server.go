@@ -232,7 +232,7 @@ func (s *Server) Start() {
 	signal.Ignore(syscall.SIGHUP)
 
 	fmt.Printf("on port %v.\n", addr)
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 2)
 	s.Stop()
 	os.Exit(0)
 	select {
