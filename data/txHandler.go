@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 
 	"github.com/algorand/go-algorand/crypto"
@@ -175,6 +176,23 @@ func (handler *TxHandler) asyncVerifySignature(arg interface{}) interface{} {
 	return nil
 }
 
+func LeftAligned(thing interface{}, size int) string {
+	s := fmt.Sprintf("%v", thing)
+
+	if len(s) > size {
+		return s[0:size]
+	}
+	fill := size - len(s)
+	spaces := []string{}
+	for {
+		spaces = append(spaces, " ")
+		if len(spaces) >= fill {
+			break
+		}
+	}
+	return s + strings.Join(spaces, "")
+}
+
 func (handler *TxHandler) processIncomingTxn(rawmsg network.IncomingMessage) network.OutgoingMessage {
 	dec := protocol.NewDecoderBytes(rawmsg.Data)
 	ntx := 0
@@ -187,7 +205,20 @@ func (handler *TxHandler) processIncomingTxn(rawmsg network.IncomingMessage) net
 		}
 
 		err := dec.Decode(&unverifiedTxGroup[ntx])
-		fmt.Printf("%+v\n", unverifiedTxGroup[ntx])
+		//fmt.Printf("%+v\n", unverifiedTxGroup[ntx])
+
+		sTx := unverifiedTxGroup[ntx]
+		tx := sTx.Txn
+		fmt.Printf("%s %s %s %s %s\n", LeftAligned(tx.Type, 10),
+			LeftAligned(tx.Header.Sender, 20),
+			LeftAligned(tx.PaymentTxnFields.Receiver, 20),
+			LeftAligned(tx.PaymentTxnFields.Amount, 20),
+			LeftAligned(len(sTx.Sig), 10))
+
+		//Header.Sender
+		//Header.Fee
+		//Header.Note
+
 		if err == io.EOF {
 			break
 		}
