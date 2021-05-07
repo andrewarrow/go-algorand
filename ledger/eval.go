@@ -487,9 +487,9 @@ func (eval *BlockEvaluator) TestTransactionGroup(txgroup []transactions.SignedTx
 		return fmt.Errorf("group size %d exceeds maximum %d", len(txgroup), eval.proto.MaxTxGroupSize)
 	}
 
-	fmt.Println("eval.state.child...", eval.state)
+	fmt.Printf("eval.state.child %+v\n", eval.state)
 	cow := eval.state.child(len(txgroup))
-	fmt.Println("eval.state.child...", cow)
+	fmt.Printf("eval.state.child %+v\n", cow)
 
 	var group transactions.TxGroup
 	for gi, txn := range txgroup {
