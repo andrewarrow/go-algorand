@@ -1,4 +1,5 @@
 *.log
+vendor
 *.log.archive
 *.out
 *.prof

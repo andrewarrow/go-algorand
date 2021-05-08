@@ -1,18 +1,3 @@
-// Copyright (C) 2019-2021 Algorand, Inc.
-// This file is part of go-algorand
-//
-// go-algorand is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
-//
-// go-algorand is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with go-algorand.  If not, see <https://www.gnu.org/licenses/>.
 
 package libgoal
 
@@ -41,15 +26,10 @@ import (
 	"github.com/algorand/go-algorand/util"
 )
 
-// defaultKMDTimeoutSecs is the default number of seconds after which kmd will
-// kill itself if there are no requests. This can be overridden with
-// SetKMDStartArgs
 const defaultKMDTimeoutSecs = 60
 
-// DefaultKMDDataDir is the name of the directory within the algod data directory where kmd data goes
 const DefaultKMDDataDir = nodecontrol.DefaultKMDDataDir
 
-// Client represents the entry point for all libgoal functions
 type Client struct {
 	nc                   nodecontrol.NodeController
 	kmdStartArgs         nodecontrol.KMDStartArgs
@@ -60,40 +40,25 @@ type Client struct {
 	kmdVersionAffinity   kmdclient.APIVersion
 }
 
-// ClientConfig is data to configure a Client
 type ClientConfig struct {
-	// AlgodDataDir is the data dir for `algod`
 	AlgodDataDir string
 
-	// KMDDataDir is the data dir for `kmd`, default ${HOME}/.algorand/kmd
 	KMDDataDir string
 
-	// CacheDir is a place to store some stuff
 	CacheDir string
 
-	// BinDir may be "" and it will be guesed
 	BinDir string
 }
 
-// ClientType represents the type of client you need
-// It ensures the specified type(s) can be initialized
-// when the libgoal client is created.
-// Any client type not specified will be initialized on-demand.
 type ClientType int
 
 const (
-	// DynamicClient creates clients on-demand
 	DynamicClient ClientType = iota
-	// KmdClient ensures the kmd client can be initialized when created
 	KmdClient
-	// AlgodClient ensures the algod client can be initialized when created
 	AlgodClient
-	// FullClient ensures all clients can be initialized when created
 	FullClient
 )
 
-// MakeClientWithBinDir creates and inits a libgoal.Client, additionally
-// allowing the user to specify a binary directory
 func MakeClientWithBinDir(binDir, dataDir, cacheDir string, clientType ClientType) (c Client, err error) {
 	config := ClientConfig{
 		BinDir:       binDir,
@@ -104,7 +69,6 @@ func MakeClientWithBinDir(binDir, dataDir, cacheDir string, clientType ClientTyp
 	return
 }
 
-// MakeClient creates and inits a libgoal.Client
 func MakeClient(dataDir, cacheDir string, clientType ClientType) (c Client, err error) {
 	binDir, err := util.ExeDir()
 	if err != nil {
@@ -119,7 +83,6 @@ func MakeClient(dataDir, cacheDir string, clientType ClientType) (c Client, err 
 	return
 }
 
-// MakeClientFromConfig creates a libgoal.Client from a config struct with many options.
 func MakeClientFromConfig(config ClientConfig, clientType ClientType) (c Client, err error) {
 	if config.BinDir == "" {
 		config.BinDir, err = util.ExeDir()
@@ -131,9 +94,7 @@ func MakeClientFromConfig(config ClientConfig, clientType ClientType) (c Client,
 	return
 }
 
-// Init takes data directory path or an empty string if $ALGORAND_DATA is defined and initializes Client
 func (c *Client) init(config ClientConfig, clientType ClientType) error {
-	// check and assign dataDir
 	dataDir, err := getDataDir(config.AlgodDataDir)
 	if err != nil {
 		return err
@@ -143,7 +104,6 @@ func (c *Client) init(config ClientConfig, clientType ClientType) error {
 	c.algodVersionAffinity = algodclient.APIVersionV1
 	c.kmdVersionAffinity = kmdclient.APIVersionV1
 
-	// Get node controller
 	nc, err := getNodeController(config.BinDir, config.AlgodDataDir)
 	if err != nil {
 		return err
@@ -156,7 +116,6 @@ func (c *Client) init(config ClientConfig, clientType ClientType) error {
 	}
 	c.nc = nc
 
-	// Initialize default kmd start args
 	c.kmdStartArgs = nodecontrol.KMDStartArgs{
 		TimeoutSecs: defaultKMDTimeoutSecs,
 	}
@@ -200,17 +159,12 @@ func (c *Client) ensureAlgodClient() (*algodclient.RestClient, error) {
 	return &algod, err
 }
 
-// DataDir returns the Algorand's client data directory path
 func (c *Client) DataDir() string {
 	return c.dataDir
 }
 
 func getDataDir(dataDir string) (string, error) {
-	// Get the target data directory to work against,
-	// then handle the scenario where no data directory is provided.
 
-	// Figure out what data directory to tell algod to use.
-	// If not specified on cmdline with '-d', look for default in environment.
 	dir := dataDir
 	if dir == "" {
 		dir = os.Getenv("ALGORAND_DATA")
@@ -232,13 +186,11 @@ func getNodeController(binDir, dataDir string) (nc nodecontrol.NodeController, e
 	return nodecontrol.MakeNodeController(binDir, dataDir), nil
 }
 
-// SetKMDStartArgs sets the arguments used when starting kmd
 func (c *Client) SetKMDStartArgs(args nodecontrol.KMDStartArgs) {
 	c.kmdStartArgs = args
 }
 
 func (c *Client) getKMDClient() (kmdclient.KMDClient, error) {
-	// Will return alreadyRunning = true if kmd already running
 	_, err := c.nc.StartKMD(c.kmdStartArgs)
 	if err != nil {
 		return kmdclient.KMDClient{}, err
@@ -267,7 +219,6 @@ func (c *Client) ensureGenesisID() (string, error) {
 	return genesis.ID(), nil
 }
 
-// GenesisID fetches the genesis ID for the running algod node
 func (c *Client) GenesisID() (string, error) {
 	response, err := c.ensureGenesisID()
 
@@ -277,17 +228,14 @@ func (c *Client) GenesisID() (string, error) {
 	return response, nil
 }
 
-// FullStop stops the clients including graceful shutdown to algod and kmd
 func (c *Client) FullStop() error {
 	return c.nc.FullStop()
 }
 
 func (c *Client) checkHandleValidMaybeRenew(walletHandle []byte) bool {
-	// Blank handles are definitely invalid
 	if len(walletHandle) == 0 {
 		return false
 	}
-	// Otherwise, check with kmd and possibly renew
 	kmd, err := c.ensureKmdClient()
 	if err != nil {
 		return false
@@ -296,8 +244,6 @@ func (c *Client) checkHandleValidMaybeRenew(walletHandle []byte) bool {
 	return err == nil
 }
 
-// ListAddresses takes a wallet handle and returns the list of addresses associated with it. If no addresses are
-// associated with the wallet, it returns an empty list.
 func (c *Client) ListAddresses(walletHandle []byte) ([]string, error) {
 	las, err := c.ListAddressesWithInfo(walletHandle)
 	if err != nil {
@@ -312,12 +258,7 @@ func (c *Client) ListAddresses(walletHandle []byte) ([]string, error) {
 	return addrs, nil
 }
 
-// ListAddressesWithInfo takes a wallet handle and returns the list of
-// addresses associated with it, along with additional information to
-// indicate if an address is multisig or not.  If no addresses are
-// associated with the wallet, it returns an empty list.
 func (c *Client) ListAddressesWithInfo(walletHandle []byte) ([]ListedAddress, error) {
-	// List the keys associated with the walletHandle
 	kmd, err := c.ensureKmdClient()
 	if err != nil {
 		return nil, err
@@ -326,7 +267,6 @@ func (c *Client) ListAddressesWithInfo(walletHandle []byte) ([]ListedAddress, er
 	if err != nil {
 		return nil, err
 	}
-	// List multisig addresses as well
 	response2, err := kmd.ListMultisigAddrs(walletHandle)
 	if err != nil {
 		return nil, err
@@ -350,14 +290,11 @@ func (c *Client) ListAddressesWithInfo(walletHandle []byte) ([]ListedAddress, er
 	return addresses, nil
 }
 
-// ListedAddress is an address returned by ListAddresses, with a flag
-// to indicate whether it's a multisig address.
 type ListedAddress struct {
 	Addr     string
 	Multisig bool
 }
 
-// DeleteAccount deletes an account.
 func (c *Client) DeleteAccount(walletHandle []byte, walletPassword []byte, addr string) error {
 	kmd, err := c.ensureKmdClient()
 	if err != nil {
@@ -368,7 +305,6 @@ func (c *Client) DeleteAccount(walletHandle []byte, walletPassword []byte, addr 
 	return err
 }
 
-// GenerateAddress takes a wallet handle, generate an additional address for it and returns the public address
 func (c *Client) GenerateAddress(walletHandle []byte) (string, error) {
 	kmd, err := c.ensureKmdClient()
 	if err != nil {
@@ -382,10 +318,7 @@ func (c *Client) GenerateAddress(walletHandle []byte) (string, error) {
 	return resp.Address, nil
 }
 
-// CreateMultisigAccount takes a wallet handle, a list of (nonmultisig) addresses, and a threshold and creates (and returns) a multisig adress
-// TODO: Should these be raw public keys instead of addresses so users can't shoot themselves in the foot by passing in a multisig addr? Probably will become irrelevant after CSID changes.
 func (c *Client) CreateMultisigAccount(walletHandle []byte, threshold uint8, addrs []string) (string, error) {
-	// convert the addresses into public keys
 	pks := make([]crypto.PublicKey, len(addrs))
 	for i, addrStr := range addrs {
 		addr, err := basics.UnmarshalChecksumAddress(addrStr)
@@ -406,7 +339,6 @@ func (c *Client) CreateMultisigAccount(walletHandle []byte, threshold uint8, add
 	return resp.Address, nil
 }
 
-// DeleteMultisigAccount deletes a multisig account.
 func (c *Client) DeleteMultisigAccount(walletHandle []byte, walletPassword []byte, addr string) error {
 	kmd, err := c.ensureKmdClient()
 	if err != nil {
@@ -417,8 +349,6 @@ func (c *Client) DeleteMultisigAccount(walletHandle []byte, walletPassword []byt
 	return err
 }
 
-// LookupMultisigAccount returns the threshold and public keys for a
-// multisig address.
 func (c *Client) LookupMultisigAccount(walletHandle []byte, multisigAddr string) (info MultisigInfo, err error) {
 	kmd, err := c.ensureKmdClient()
 	if err != nil {
@@ -442,21 +372,17 @@ func (c *Client) LookupMultisigAccount(walletHandle []byte, multisigAddr string)
 	return
 }
 
-// MultisigInfo represents the information about a multisig account.
 type MultisigInfo struct {
 	Version   uint8
 	Threshold uint8
 	PKs       []string
 }
 
-// SendPaymentFromWallet signs a transaction using the given wallet and returns the resulted transaction id
 func (c *Client) SendPaymentFromWallet(walletHandle, pw []byte, from, to string, fee, amount uint64, note []byte, closeTo string, firstValid, lastValid basics.Round) (transactions.Transaction, error) {
 	return c.SendPaymentFromWalletWithLease(walletHandle, pw, from, to, fee, amount, note, closeTo, [32]byte{}, firstValid, lastValid)
 }
 
-// SendPaymentFromWalletWithLease is like SendPaymentFromWallet, but with a custom lease.
 func (c *Client) SendPaymentFromWalletWithLease(walletHandle, pw []byte, from, to string, fee, amount uint64, note []byte, closeTo string, lease [32]byte, firstValid, lastValid basics.Round) (transactions.Transaction, error) {
-	// Build the transaction
 	tx, err := c.ConstructPayment(from, to, fee, amount, note, closeTo, lease, firstValid, lastValid)
 	if err != nil {
 		return transactions.Transaction{}, err
@@ -466,25 +392,21 @@ func (c *Client) SendPaymentFromWalletWithLease(walletHandle, pw []byte, from, t
 }
 
 func (c *Client) signAndBroadcastTransactionWithWallet(walletHandle, pw []byte, tx transactions.Transaction) (transactions.Transaction, error) {
-	// Sign the transaction
 	kmd, err := c.ensureKmdClient()
 	if err != nil {
 		return transactions.Transaction{}, err
 	}
-	// TODO(rekeying) probably libgoal should allow passing in different public key to sign with
 	resp0, err := kmd.SignTransaction(walletHandle, pw, crypto.PublicKey{}, tx)
 	if err != nil {
 		return transactions.Transaction{}, err
 	}
 
-	// Decode the SignedTxn
 	var stx transactions.SignedTxn
 	err = protocol.Decode(resp0.SignedTransaction, &stx)
 	if err != nil {
 		return transactions.Transaction{}, err
 	}
 
-	// Broadcast the transaction
 	algod, err := c.ensureAlgodClient()
 	if err != nil {
 		return transactions.Transaction{}, err
@@ -497,17 +419,6 @@ func (c *Client) signAndBroadcastTransactionWithWallet(walletHandle, pw []byte, 
 	return tx, nil
 }
 
-// ComputeValidityRounds takes first, last and rounds provided by a user and resolves them into
-// actual firstValid and lastValid.
-// Resolution table
-//
-// validRounds | lastValid | result (lastValid)
-// -------------------------------------------------
-// 	  	 0     |     0     | firstValid + maxTxnLife
-// 		 0     |     N     | lastValid
-// 		 M     |     0     | first + validRounds - 1
-// 		 M     |     M     | error
-//
 func (c *Client) ComputeValidityRounds(firstValid, lastValid, validRounds uint64) (uint64, uint64, error) {
 	params, err := c.SuggestedParams()
 	if err != nil {
@@ -531,8 +442,6 @@ func computeValidityRounds(firstValid, lastValid, validRounds, lastRound, maxTxn
 	}
 
 	if validRounds != 0 {
-		// MaxTxnLife is the maximum difference between LastValid and FirstValid
-		// so that validRounds = maxTxnLife+1 gives lastValid = firstValid + validRounds - 1 = firstValid + maxTxnLife
 		if validRounds > maxTxnLife+1 {
 			return 0, 0, fmt.Errorf("cannot construct transaction: txn validity period %d is greater than protocol max txn lifetime %d", validRounds-1, maxTxnLife)
 		}
@@ -550,12 +459,6 @@ func computeValidityRounds(firstValid, lastValid, validRounds, lastRound, maxTxn
 	return firstValid, lastValid, nil
 }
 
-// ConstructPayment builds a payment transaction to be signed
-// If the fee is 0, the function will use the suggested one form the network
-// Although firstValid and lastValid come pre-computed in a normal flow,
-// additional validation is done by computeValidityRounds:
-// if the lastValid is 0, firstValid + maxTxnLifetime will be used
-// if the firstValid is 0, lastRound + 1 will be used
 func (c *Client) ConstructPayment(from, to string, fee, amount uint64, note []byte, closeTo string, lease [32]byte, firstValid, lastValid basics.Round) (transactions.Transaction, error) {
 	fromAddr, err := basics.UnmarshalChecksumAddress(from)
 	if err != nil {
@@ -570,7 +473,6 @@ func (c *Client) ConstructPayment(from, to string, fee, amount uint64, note []by
 		}
 	}
 
-	// Get current round, protocol, genesis ID
 	params, err := c.SuggestedParams()
 	if err != nil {
 		return transactions.Transaction{}, err
@@ -601,9 +503,6 @@ func (c *Client) ConstructPayment(from, to string, fee, amount uint64, note []by
 		},
 	}
 
-	// If requesting closing, put it in the transaction.  The protocol might
-	// not support it, but in that case, better to fail the transaction,
-	// because the user explicitly asked for it, and it's not supported.
 	if closeTo != "" {
 		closeToAddr, err := basics.UnmarshalChecksumAddress(closeTo)
 		if err != nil {
@@ -615,14 +514,10 @@ func (c *Client) ConstructPayment(from, to string, fee, amount uint64, note []by
 
 	tx.Header.GenesisID = params.GenesisID
 
-	// Check if the protocol supports genesis hash
 	if cp.SupportGenesisHash {
 		copy(tx.Header.GenesisHash[:], params.GenesisHash)
 	}
 
-	// Default to the suggested fee, if the caller didn't supply it
-	// Fee is tricky, should taken care last. We encode the final transaction to get the size post signing and encoding
-	// Then, we multiply it by the suggested fee per byte.
 	if fee == 0 {
 		tx.Fee = basics.MulAIntSaturate(basics.MicroAlgos{Raw: params.Fee}, tx.EstimateEncodedSize())
 	}
@@ -635,7 +530,6 @@ func (c *Client) ConstructPayment(from, to string, fee, amount uint64, note []by
 
 /* Algod Wrappers */
 
-// Status returns the node status
 func (c *Client) Status() (resp generatedV2.NodeStatusResponse, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -644,7 +538,6 @@ func (c *Client) Status() (resp generatedV2.NodeStatusResponse, err error) {
 	return
 }
 
-// AccountInformation takes an address and returns its information
 func (c *Client) AccountInformation(account string) (resp v1.Account, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -653,7 +546,6 @@ func (c *Client) AccountInformation(account string) (resp v1.Account, err error)
 	return
 }
 
-// AccountInformationV2 takes an address and returns its information
 func (c *Client) AccountInformationV2(account string) (resp generatedV2.Account, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -662,7 +554,6 @@ func (c *Client) AccountInformationV2(account string) (resp generatedV2.Account,
 	return
 }
 
-// AccountData takes an address and returns its basics.AccountData
 func (c *Client) AccountData(account string) (accountData basics.AccountData, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -675,7 +566,6 @@ func (c *Client) AccountData(account string) (accountData basics.AccountData, er
 	return
 }
 
-// AssetInformation takes an asset's index and returns its information
 func (c *Client) AssetInformation(index uint64) (resp v1.AssetParams, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -684,7 +574,6 @@ func (c *Client) AssetInformation(index uint64) (resp v1.AssetParams, err error)
 	return
 }
 
-// AssetInformationV2 takes an asset's index and returns its information
 func (c *Client) AssetInformationV2(index uint64) (resp generatedV2.Asset, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -693,7 +582,6 @@ func (c *Client) AssetInformationV2(index uint64) (resp generatedV2.Asset, err e
 	return
 }
 
-// ApplicationInformation takes an app's index and returns its information
 func (c *Client) ApplicationInformation(index uint64) (resp generatedV2.Application, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -702,7 +590,6 @@ func (c *Client) ApplicationInformation(index uint64) (resp generatedV2.Applicat
 	return
 }
 
-// TransactionInformation takes an address and associated txid and return its information
 func (c *Client) TransactionInformation(addr, txid string) (resp v1.Transaction, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -711,8 +598,6 @@ func (c *Client) TransactionInformation(addr, txid string) (resp v1.Transaction,
 	return
 }
 
-// PendingTransactionInformation returns information about a recently issued
-// transaction based on its txid.
 func (c *Client) PendingTransactionInformation(txid string) (resp v1.Transaction, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -721,7 +606,6 @@ func (c *Client) PendingTransactionInformation(txid string) (resp v1.Transaction
 	return
 }
 
-// Block takes a round and returns its block
 func (c *Client) Block(round uint64) (resp v1.Block, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -730,7 +614,6 @@ func (c *Client) Block(round uint64) (resp v1.Block, err error) {
 	return
 }
 
-// RawBlock takes a round and returns its block
 func (c *Client) RawBlock(round uint64) (resp v1.RawBlock, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -739,7 +622,6 @@ func (c *Client) RawBlock(round uint64) (resp v1.RawBlock, err error) {
 	return
 }
 
-// BookkeepingBlock takes a round and returns its block
 func (c *Client) BookkeepingBlock(round uint64) (block bookkeeping.Block, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -757,7 +639,6 @@ func (c *Client) BookkeepingBlock(round uint64) (block bookkeeping.Block, err er
 	return
 }
 
-// HealthCheck returns an error if something is wrong
 func (c *Client) HealthCheck() error {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -766,7 +647,6 @@ func (c *Client) HealthCheck() error {
 	return err
 }
 
-// WaitForRound takes a round, waits until it appears and returns its status. This function blocks.
 func (c *Client) WaitForRound(round uint64) (resp generatedV2.NodeStatusResponse, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -775,7 +655,6 @@ func (c *Client) WaitForRound(round uint64) (resp generatedV2.NodeStatusResponse
 	return
 }
 
-// GetBalance takes an address and returns its total balance; if the address doesn't exist, it returns 0.
 func (c *Client) GetBalance(address string) (uint64, error) {
 	resp, err := c.AccountInformation(address)
 	if err != nil {
@@ -784,7 +663,6 @@ func (c *Client) GetBalance(address string) (uint64, error) {
 	return resp.Amount, nil
 }
 
-// AlgodVersions return the list of supported API versions in algod
 func (c Client) AlgodVersions() (resp common.Version, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -793,7 +671,6 @@ func (c Client) AlgodVersions() (resp common.Version, err error) {
 	return
 }
 
-// LedgerSupply returns the total number of algos in the system
 func (c Client) LedgerSupply() (resp v1.Supply, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -802,9 +679,7 @@ func (c Client) LedgerSupply() (resp v1.Supply, err error) {
 	return
 }
 
-// CurrentRound returns the current known round
 func (c Client) CurrentRound() (lastRound uint64, err error) {
-	// Get current round
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
 		resp, err := algod.Status()
@@ -815,7 +690,6 @@ func (c Client) CurrentRound() (lastRound uint64, err error) {
 	return
 }
 
-// SuggestedFee returns the suggested fee per byte by the network
 func (c *Client) SuggestedFee() (fee uint64, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -827,7 +701,6 @@ func (c *Client) SuggestedFee() (fee uint64, err error) {
 	return
 }
 
-// SuggestedParams returns the suggested parameters for a new transaction
 func (c *Client) SuggestedParams() (params v1.TransactionParams, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -836,8 +709,6 @@ func (c *Client) SuggestedParams() (params v1.TransactionParams, err error) {
 	return
 }
 
-// GetPendingTransactions gets a snapshot of current pending transactions on the node.
-// If maxTxns = 0, fetches as many transactions as possible.
 func (c *Client) GetPendingTransactions(maxTxns uint64) (resp v1.PendingTransactions, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -846,14 +717,12 @@ func (c *Client) GetPendingTransactions(maxTxns uint64) (resp v1.PendingTransact
 	return
 }
 
-// ExportKey exports the private key of the passed account, assuming it's available
 func (c *Client) ExportKey(walletHandle []byte, password, account string) (resp kmdapi.APIV1POSTKeyExportResponse, err error) {
 	kmd, err := c.ensureKmdClient()
 	if err != nil {
 		return
 	}
 
-	// export the secret key for the bidder
 	req := kmdapi.APIV1POSTKeyExportRequest{
 		WalletHandleToken: string(walletHandle),
 		Address:           account,
@@ -864,7 +733,6 @@ func (c *Client) ExportKey(walletHandle []byte, password, account string) (resp 
 	return resp, err
 }
 
-// ConsensusParams returns the consensus parameters for the protocol active at the specified round
 func (c *Client) ConsensusParams(round uint64) (consensus config.ConsensusParams, err error) {
 	block, err := c.Block(round)
 	if err != nil {
@@ -880,26 +748,22 @@ func (c *Client) ConsensusParams(round uint64) (consensus config.ConsensusParams
 	return params, nil
 }
 
-// SetAPIVersionAffinity sets the desired client API version affinity of the algod and kmd clients.
 func (c *Client) SetAPIVersionAffinity(algodVersionAffinity algodclient.APIVersion, kmdVersionAffinity kmdclient.APIVersion) {
 	c.algodVersionAffinity = algodVersionAffinity
 	c.kmdVersionAffinity = kmdVersionAffinity
 }
 
-// AbortCatchup aborts the currently running catchup
 func (c *Client) AbortCatchup() error {
 	algod, err := c.ensureAlgodClient()
 	if err != nil {
 		return err
 	}
-	// we need to ensure we're using the v2 status so that we would get the catchpoint information.
 	algod.SetAPIVersionAffinity(algodclient.APIVersionV2)
 	resp, err := algod.Status()
 	if err != nil {
 		return err
 	}
 	if resp.Catchpoint == nil || (*resp.Catchpoint) == "" {
-		// no error - we were not catching up.
 		return nil
 	}
 	_, err = algod.AbortCatchup(*resp.Catchpoint)
@@ -909,7 +773,6 @@ func (c *Client) AbortCatchup() error {
 	return nil
 }
 
-// Catchup start catching up to the give catchpoint label.
 func (c *Client) Catchup(catchpointLabel string) error {
 	algod, err := c.ensureAlgodClient()
 	if err != nil {
@@ -924,7 +787,6 @@ func (c *Client) Catchup(catchpointLabel string) error {
 
 const defaultAppIdx = 1380011588
 
-// MakeDryrunStateBytes function creates DryrunRequest data structure in serialized form according to the format
 func MakeDryrunStateBytes(client Client, txnOrStxn interface{}, other []transactions.SignedTxn, proto string, format string) (result []byte, err error) {
 	switch format {
 	case "json":
@@ -946,7 +808,6 @@ func MakeDryrunStateBytes(client Client, txnOrStxn interface{}, other []transact
 	}
 }
 
-// MakeDryrunState function creates v2.DryrunRequest data structure
 func MakeDryrunState(client Client, txnOrStxn interface{}, other []transactions.SignedTxn, proto string) (dr v2.DryrunRequest, err error) {
 	gdr, err := MakeDryrunStateGenerated(client, txnOrStxn, other, proto)
 	if err != nil {
@@ -955,11 +816,9 @@ func MakeDryrunState(client Client, txnOrStxn interface{}, other []transactions.
 	return v2.DryrunRequestFromGenerated(&gdr)
 }
 
-// MakeDryrunStateGenerated function creates generatedV2.DryrunRequest data structure
 func MakeDryrunStateGenerated(client Client, txnOrStxn interface{}, other []transactions.SignedTxn, proto string) (dr generatedV2.DryrunRequest, err error) {
 	var txns []transactions.SignedTxn
 	if txnOrStxn == nil {
-		// empty input do nothing
 	} else if txn, ok := txnOrStxn.(transactions.Transaction); ok {
 		txns = append(txns, transactions.SignedTxn{Txn: txn})
 	} else if stxn, ok := txnOrStxn.(transactions.SignedTxn); ok {
@@ -983,7 +842,6 @@ func MakeDryrunStateGenerated(client Client, txnOrStxn interface{}, other []tran
 			for _, appIdx := range apps {
 				var appParams generatedV2.ApplicationParams
 				if appIdx == 0 {
-					// if it is an app create txn then use params from the txn
 					appParams.ApprovalProgram = tx.ApprovalProgram
 					appParams.ClearStateProgram = tx.ClearStateProgram
 					appParams.GlobalStateSchema = &generatedV2.ApplicationStateSchema{
@@ -995,10 +853,8 @@ func MakeDryrunStateGenerated(client Client, txnOrStxn interface{}, other []tran
 						NumByteSlice: tx.LocalStateSchema.NumByteSlice,
 					}
 					appParams.Creator = tx.Sender.String()
-					// zero is not acceptable by ledger in dryrun/debugger
 					appIdx = defaultAppIdx
 				} else {
-					// otherwise need to fetch app state
 					var app generatedV2.Application
 					if app, err = client.ApplicationInformation(uint64(tx.ApplicationID)); err != nil {
 						return
@@ -1034,7 +890,6 @@ func MakeDryrunStateGenerated(client Client, txnOrStxn interface{}, other []tran
 	return
 }
 
-// Dryrun takes an app's index and returns its information
 func (c *Client) Dryrun(data []byte) (resp generatedV2.DryrunResponse, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {
@@ -1047,7 +902,6 @@ func (c *Client) Dryrun(data []byte) (resp generatedV2.DryrunResponse, err error
 	return
 }
 
-// TxnProof returns a Merkle proof for a transaction in a block.
 func (c *Client) TxnProof(txid string, round uint64) (resp generatedV2.ProofResponse, err error) {
 	algod, err := c.ensureAlgodClient()
 	if err == nil {

@@ -1,4 +1,5 @@
 data/ledger.go
+./libgoal/libgoal.go
 ../../config/consensus.go
 data/pools/transactionPool.go
 data/txHandler.go
